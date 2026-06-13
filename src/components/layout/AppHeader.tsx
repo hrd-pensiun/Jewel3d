@@ -12,7 +12,7 @@ export default function AppHeader() {
             alt="UBS GOLD"
             width={180}
             height={64}
-            className="h-11 w-auto object-contain sm:h-14"
+            className="h-11 w-auto bg-transparent object-contain sm:h-14"
             priority
           />
         </div>

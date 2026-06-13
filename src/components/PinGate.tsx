@@ -59,7 +59,7 @@ export default function PinGate({ onSuccess }: PinGateProps) {
           alt="UBS GOLD"
           width={200}
           height={72}
-          className="mx-auto h-16 w-auto object-contain sm:h-20"
+          className="mx-auto h-16 w-auto bg-transparent object-contain sm:h-20"
           priority
         />
         <p className="mt-4 text-sm text-wit-muted">Masukkan PIN untuk melanjutkan</p>
