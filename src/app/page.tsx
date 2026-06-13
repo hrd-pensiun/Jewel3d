@@ -1,25 +1,17 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import DownloadButtons from "@/components/DownloadButtons";
-import OptionsPanel from "@/components/OptionsPanel";
+import InfoPanel, { deriveGenerateOptions, type QualityMode } from "@/components/InfoPanel";
+import AppHeader from "@/components/layout/AppHeader";
+import StepProgress from "@/components/layout/StepProgress";
 import PinGate from "@/components/PinGate";
-import UploadZone from "@/components/UploadZone";
+import ResultPanel from "@/components/ResultPanel";
+import UploadPanel from "@/components/UploadPanel";
 import { parseJsonResponse, sleep } from "@/lib/fetch-json";
 import { PIN_SESSION_KEY } from "@/lib/pin";
-import { type TextureOption } from "@/lib/pricing";
+import type { TextureOption } from "@/lib/pricing";
 import type { ModelFormat } from "@/lib/tripo";
-
-const ModelViewer = dynamic(() => import("@/components/ModelViewer"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[50vh] items-center justify-center rounded-xl bg-neutral-900 sm:h-[60vh]">
-      <p className="text-neutral-500">Memuat viewer 3D…</p>
-    </div>
-  ),
-});
 
 type GenerateResult = {
   taskId: string;
@@ -54,14 +46,25 @@ const PENDING_JOB_KEY = "jewel3d_pending_job";
 export default function Home() {
   const [unlocked, setUnlocked] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [texture, setTexture] = useState<TextureOption>("standard");
-  const [quad, setQuad] = useState(false);
+  const [qualityMode, setQualityMode] = useState<QualityMode>("standard");
+  const [withTexture, setWithTexture] = useState(true);
   const [status, setStatus] = useState<GenerateStatus>("idle");
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
 
+  const { texture, quad } = useMemo(
+    () => deriveGenerateOptions(qualityMode, withTexture),
+    [qualityMode, withTexture],
+  );
+
   const isLoading = status === "uploading" || status === "generating";
+
+  const currentStep = useMemo(() => {
+    if (result || isLoading) return 3 as const;
+    if (file) return 2 as const;
+    return 1 as const;
+  }, [file, result, isLoading]);
 
   useEffect(() => {
     if (sessionStorage.getItem(PIN_SESSION_KEY) === "1") {
@@ -228,6 +231,15 @@ export default function Home() {
     }
   }
 
+  function handleReset() {
+    setFile(null);
+    setResult(null);
+    setError(null);
+    setStatus("idle");
+    setStatusMessage("");
+    sessionStorage.removeItem(PENDING_JOB_KEY);
+  }
+
   if (!unlocked) {
     return (
       <PinGate
@@ -240,96 +252,58 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-neutral-950 text-white">
-      <header className="border-b border-neutral-800 px-4 py-4 sm:px-6 sm:py-5">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Jewel 3d</h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          Foto perhiasan → Model 3D untuk preview &amp; 3D print
-        </p>
-      </header>
+    <div className="min-h-[100dvh] bg-[#eef1f6]">
+      <AppHeader />
+      <StepProgress currentStep={currentStep} />
 
-      <main className="mx-auto max-w-3xl space-y-5 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:space-y-6 sm:px-6 sm:py-8">
-        <UploadZone
-          file={file}
-          onFileSelect={setFile}
-          disabled={isLoading}
-        />
+      <main
+        id="generate"
+        className="mx-auto max-w-[1400px] px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-8"
+      >
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-stretch lg:gap-6">
+          <InfoPanel
+            qualityMode={qualityMode}
+            withTexture={withTexture}
+            onQualityModeChange={setQualityMode}
+            onWithTextureChange={setWithTexture}
+            texture={texture as TextureOption}
+            quad={quad}
+            disabled={isLoading}
+          />
 
-        <OptionsPanel
-          texture={texture}
-          quad={quad}
-          onTextureChange={setTexture}
-          onQuadChange={setQuad}
-          disabled={isLoading}
-        />
+          <UploadPanel
+            file={file}
+            onFileSelect={setFile}
+            disabled={isLoading}
+          />
 
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={!file || isLoading}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-base font-semibold text-neutral-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isLoading && (
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950" />
-          )}
-          {isLoading ? "Sedang diproses…" : "Generate Model 3D"}
-        </button>
+          <ResultPanel
+            result={result}
+            isLoading={isLoading}
+            statusMessage={statusMessage}
+            onReset={handleReset}
+          />
+        </div>
 
-        {statusMessage && (
-          <p className="text-center text-sm text-neutral-400">{statusMessage}</p>
-        )}
-
-        {error && (
-          <p className="rounded-lg border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-300">
-            {error}
-          </p>
-        )}
-
-        {result && (
-          <section className="space-y-5 sm:space-y-6">
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
-              <h2 className="text-lg font-semibold">Hasil Generate</h2>
-              <p className="mt-1 text-sm text-neutral-400">
-                Task ID: {result.taskId} · Biaya: ${result.costUsd.toFixed(2)} ·
-                Format: {result.format.toUpperCase()}
-              </p>
-              {result.requestId && (
-                <p className="mt-1 text-xs text-neutral-500">
-                  Request ID: {result.requestId}
-                </p>
-              )}
-
-              {result.previewUrl && (
-                <div className="mt-4">
-                  <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
-                    Preview render
-                  </p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={result.previewUrl}
-                    alt="Preview model 3D"
-                    className="max-h-64 w-full rounded-lg object-contain"
-                  />
-                </div>
-              )}
-            </div>
-
-            {result.format === "glb" ? (
-              <ModelViewer modelUrl={result.modelUrl} />
-            ) : (
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 text-sm text-neutral-400">
-                Preview 3D tidak tersedia untuk output FBX. Unduh file FBX
-                untuk dibuka di Blender.
-              </div>
+        <div className="mt-6 space-y-3">
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!file || isLoading}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl wit-gradient-btn px-6 py-3.5 text-base font-semibold text-white shadow-md transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 lg:max-w-md lg:mx-auto"
+          >
+            {isLoading && (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
+            {isLoading ? "Sedang diproses…" : "Generate Model 3D"}
+          </button>
 
-            <DownloadButtons
-              modelUrl={result.modelUrl}
-              taskId={result.taskId}
-              format={result.format}
-            />
-          </section>
-        )}
+          {error && (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
+              {error}
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );

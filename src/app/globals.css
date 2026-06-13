@@ -1,28 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eef1f6;
+  --foreground: #1a2b4c;
+  --wit-navy: #1a2b4c;
+  --wit-navy-light: #2a4068;
+  --wit-gold: #c5a059;
+  --wit-gold-light: #e8c872;
+  --wit-card: #ffffff;
+  --wit-muted: #6b7c93;
+  --wit-border: #dde3ed;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-wit-navy: var(--wit-navy);
+  --color-wit-navy-light: var(--wit-navy-light);
+  --color-wit-gold: var(--wit-gold);
+  --color-wit-gold-light: var(--wit-gold-light);
+  --color-wit-card: var(--wit-card);
+  --color-wit-muted: var(--wit-muted);
+  --color-wit-border: var(--wit-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.wit-gradient-gold {
+  background: linear-gradient(135deg, #c5a059 0%, #e8c872 50%, #c5a059 100%);
+}
+
+.wit-gradient-btn {
+  background: linear-gradient(135deg, #b8924a 0%, #dbb96a 50%, #c5a059 100%);
 }
 
 @keyframes shake {

@@ -10,12 +10,14 @@ type DownloadButtonsProps = {
   modelUrl: string;
   taskId: string;
   format: ModelFormat;
+  highlightFormat?: string;
 };
 
 export default function DownloadButtons({
   modelUrl,
   taskId,
   format,
+  highlightFormat = ".GLB",
 }: DownloadButtonsProps) {
   const [isExportingStl, setIsExportingStl] = useState(false);
   const [isDownloadingModel, setIsDownloadingModel] = useState(false);
@@ -23,7 +25,6 @@ export default function DownloadButtons({
 
   const isFbx = format === "fbx";
   const extension = isFbx ? "fbx" : "glb";
-  const label = isFbx ? "Download FBX" : "Download GLB";
 
   async function handleModelDownload() {
     setDownloadError(null);
@@ -39,7 +40,7 @@ export default function DownloadButtons({
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `jewel3d-${taskId}.${extension}`;
+      anchor.download = `wit3d-${taskId}.${extension}`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -55,7 +56,7 @@ export default function DownloadButtons({
     setIsExportingStl(true);
 
     try {
-      await exportGlbToStl(modelUrl, `jewel3d-${taskId}.stl`);
+      await exportGlbToStl(modelUrl, `wit3d-${taskId}.stl`);
     } catch (error) {
       console.error("[DownloadButtons] STL export failed:", error);
       setDownloadError("Gagal mengekspor STL. Coba lagi.");
@@ -64,34 +65,40 @@ export default function DownloadButtons({
     }
   }
 
+  const showGlb = highlightFormat === ".GLB" || highlightFormat === ".FBX";
+  const showStl = highlightFormat === ".STL";
+
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-3">
+      {(showGlb || isFbx) && (
         <button
           type="button"
           onClick={handleModelDownload}
           disabled={isDownloadingModel || isExportingStl}
-          className="min-h-12 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-neutral-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl wit-gradient-btn px-4 py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isDownloadingModel ? `Mengunduh ${extension.toUpperCase()}…` : label}
+          <span aria-hidden>↓</span>
+          {isDownloadingModel
+            ? `Mengunduh ${extension.toUpperCase()}…`
+            : `Download ${isFbx ? "FBX" : "GLB"}`}
         </button>
-        {!isFbx && (
-          <button
-            type="button"
-            onClick={handleStlDownload}
-            disabled={isExportingStl || isDownloadingModel}
-            className="min-h-12 rounded-lg border border-neutral-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isExportingStl ? "Mengekspor STL…" : "Download STL"}
-          </button>
-        )}
-      </div>
-      {isFbx && (
-        <p className="text-xs text-neutral-500">
-          Output quad mesh berformat FBX — buka di Blender untuk retopology.
-        </p>
       )}
-      {downloadError && <p className="text-sm text-red-400">{downloadError}</p>}
+
+      {showStl && !isFbx && (
+        <button
+          type="button"
+          onClick={handleStlDownload}
+          disabled={isExportingStl || isDownloadingModel}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl wit-gradient-btn px-4 py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span aria-hidden>↓</span>
+          {isExportingStl ? "Mengekspor STL…" : "Download STL"}
+        </button>
+      )}
+
+      {downloadError && (
+        <p className="text-center text-sm text-red-600">{downloadError}</p>
+      )}
     </div>
   );
 }

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jewel 3d",
-  description: "Foto perhiasan → Model 3D untuk preview & 3D print",
+  title: "WIT 3D Generator",
+  description: "WIT 3D — foto perhiasan ke model 3D untuk preview & 3D print",
 };
 
 export const viewport: Viewport = {
