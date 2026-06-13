@@ -36,7 +36,7 @@ export default function ModelViewer({ modelUrl }: ModelViewerProps) {
   }, [modelUrl]);
 
   return (
-    <div className="h-[60vh] w-full overflow-hidden rounded-xl bg-neutral-900">
+    <div className="h-[50vh] w-full overflow-hidden rounded-xl bg-neutral-900 sm:h-[60vh]">
       <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
         <color attach="background" args={["#171717"]} />
         <ViewerScene modelUrl={modelUrl} />

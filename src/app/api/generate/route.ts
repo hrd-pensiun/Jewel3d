@@ -8,12 +8,13 @@ import {
 } from "@/lib/image-upload";
 import { calculateCostUsd, type TextureOption } from "@/lib/pricing";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { TRIPO_ENDPOINT } from "@/lib/tripo";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const TEXTURE_OPTIONS = new Set<TextureOption>(["no", "standard", "HD"]);
 const ORIENTATION_OPTIONS = new Set(["default", "align_image"]);
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const clientIp = getClientIp(request);
@@ -82,7 +83,8 @@ export async function POST(request: Request) {
     }
 
     const texture =
-      typeof textureRaw === "string" && TEXTURE_OPTIONS.has(textureRaw as TextureOption)
+      typeof textureRaw === "string" &&
+      TEXTURE_OPTIONS.has(textureRaw as TextureOption)
         ? (textureRaw as TextureOption)
         : null;
 
@@ -106,31 +108,21 @@ export async function POST(request: Request) {
     });
     const imageUrl = await fal.storage.upload(uploadFile);
 
-    const result = await fal.subscribe("tripo3d/tripo/v2.5/image-to-3d", {
+    const { request_id: requestId } = await fal.queue.submit(TRIPO_ENDPOINT, {
       input: {
         image_url: imageUrl,
         texture,
         quad,
         orientation,
       },
-      logs: true,
     });
-
-    const modelUrl = result.data.model_mesh?.url;
-    if (!modelUrl) {
-      return NextResponse.json(
-        { error: "Model 3D tidak ditemukan dalam respons API." },
-        { status: 502 },
-      );
-    }
 
     const costUsd = calculateCostUsd(texture, quad);
 
     return NextResponse.json({
-      taskId: result.data.task_id,
-      modelUrl,
-      previewUrl: result.data.rendered_image?.url ?? null,
+      requestId,
       costUsd,
+      format: quad ? "fbx" : "glb",
     });
   } catch (error) {
     console.error("[api/generate]", error);
@@ -143,7 +135,7 @@ export async function POST(request: Request) {
         error:
           message.includes("401") || message.includes("Unauthorized")
             ? "FAL_KEY tidak valid. Periksa API key di .env.local."
-            : "Gagal men-generate model 3D. Periksa koneksi dan API key, lalu coba lagi.",
+            : "Gagal mengirim permintaan generate. Periksa koneksi dan API key.",
       },
       { status: 500 },
     );

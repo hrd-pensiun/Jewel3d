@@ -65,7 +65,7 @@ export default function OptionsPanel({
         <span className="text-sm">
           Quad mesh (output FBX, untuk retopology)
           <span className="mt-0.5 block text-xs text-neutral-500">
-            +$0.05 — mesh quad untuk retopology
+            +$0.05 — output FBX (tanpa preview 3D di browser)
           </span>
         </span>
       </label>
