@@ -1,3 +1,5 @@
+import { USER_MESSAGES } from "@/lib/user-messages";
+
 export async function parseJsonResponse<T extends { error?: string }>(
   response: Response,
 ): Promise<T> {
@@ -7,11 +9,10 @@ export async function parseJsonResponse<T extends { error?: string }>(
     return (await response.json()) as T;
   }
 
-  const text = (await response.text()).trim();
   const fallback =
     response.status === 504
-      ? "Server timeout — generate mungkin masih berjalan. Coba refresh atau cek fal.ai dashboard."
-      : text.slice(0, 160) || "Respons server tidak valid.";
+      ? USER_MESSAGES.processingTimeout
+      : USER_MESSAGES.genericError;
 
   return { error: fallback } as T;
 }

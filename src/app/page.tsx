@@ -10,21 +10,18 @@ import ResultPanel from "@/components/ResultPanel";
 import UploadPanel from "@/components/UploadPanel";
 import { parseJsonResponse, sleep } from "@/lib/fetch-json";
 import { PIN_SESSION_KEY } from "@/lib/pin";
-import type { TextureOption } from "@/lib/pricing";
+import { toUserError, USER_MESSAGES } from "@/lib/user-messages";
 import type { ModelFormat } from "@/lib/tripo";
 
 type GenerateResult = {
   taskId: string;
   modelUrl: string;
   previewUrl: string | null;
-  costUsd: number;
   format: ModelFormat;
-  requestId?: string;
 };
 
 type SubmitResponse = {
   requestId: string;
-  costUsd: number;
   format: ModelFormat;
   error?: string;
 };
@@ -81,7 +78,6 @@ export default function Home() {
     try {
       const pending = JSON.parse(raw) as {
         requestId: string;
-        costUsd: number;
         format: ModelFormat;
       };
 
@@ -94,7 +90,6 @@ export default function Home() {
 
   async function pollGenerateStatus(
     requestId: string,
-    costUsd: number,
     format: ModelFormat,
   ): Promise<GenerateResult> {
     const maxAttempts = 90;
@@ -108,53 +103,47 @@ export default function Home() {
       const data = await parseJsonResponse<StatusResponse>(response);
 
       if (!response.ok || data.status === "FAILED") {
-        throw new Error(data.error ?? "Generate gagal.");
+        throw new Error(toUserError(data.error));
       }
 
       if (data.status === "IN_QUEUE") {
         setStatusMessage(
           data.queuePosition
-            ? `Antrian fal.ai… posisi ${data.queuePosition}`
-            : "Antrian fal.ai…",
+            ? USER_MESSAGES.queuePosition(data.queuePosition)
+            : USER_MESSAGES.queue,
         );
         continue;
       }
 
       if (data.status === "IN_PROGRESS") {
-        setStatusMessage("Men-generate model 3D… (±30–60 detik)");
+        setStatusMessage(USER_MESSAGES.generating);
         continue;
       }
 
       if (data.status === "COMPLETED" && data.modelUrl && data.taskId) {
         return {
-          requestId,
           taskId: data.taskId,
           modelUrl: data.modelUrl,
           previewUrl: data.previewUrl ?? null,
-          costUsd,
           format: data.format ?? format,
         };
       }
     }
 
-    throw new Error(
-      `Generate masih berjalan. Simpan Request ID: ${requestId} — cek fal.ai dashboard.`,
-    );
+    throw new Error(USER_MESSAGES.processingTimeout);
   }
 
   async function resumePendingJob(pending: {
     requestId: string;
-    costUsd: number;
     format: ModelFormat;
   }) {
     setStatus("generating");
-    setStatusMessage("Melanjutkan generate yang sedang berjalan…");
+    setStatusMessage(USER_MESSAGES.resuming);
     setError(null);
 
     try {
       const completed = await pollGenerateStatus(
         pending.requestId,
-        pending.costUsd,
         pending.format,
       );
       sessionStorage.removeItem(PENDING_JOB_KEY);
@@ -164,11 +153,9 @@ export default function Home() {
     } catch (resumeError) {
       setStatus("error");
       setStatusMessage("");
-      setError(
-        resumeError instanceof Error
-          ? resumeError.message
-          : "Gagal melanjutkan generate.",
-      );
+      setError(toUserError(
+        resumeError instanceof Error ? resumeError.message : null,
+      ));
     }
   }
 
@@ -178,7 +165,7 @@ export default function Home() {
     setError(null);
     setResult(null);
     setStatus("uploading");
-    setStatusMessage("Mengunggah gambar…");
+    setStatusMessage(USER_MESSAGES.uploading);
 
     const formData = new FormData();
     formData.append("image", file);
@@ -195,24 +182,22 @@ export default function Home() {
       const submitData = await parseJsonResponse<SubmitResponse>(response);
 
       if (!response.ok || !submitData.requestId) {
-        throw new Error(submitData.error ?? "Gagal mengirim permintaan generate.");
+        throw new Error(toUserError(submitData.error));
       }
 
       sessionStorage.setItem(
         PENDING_JOB_KEY,
         JSON.stringify({
           requestId: submitData.requestId,
-          costUsd: submitData.costUsd,
           format: submitData.format,
         }),
       );
 
       setStatus("generating");
-      setStatusMessage("Permintaan diterima. Menunggu fal.ai…");
+      setStatusMessage(USER_MESSAGES.accepted);
 
       const completed = await pollGenerateStatus(
         submitData.requestId,
-        submitData.costUsd,
         submitData.format,
       );
 
@@ -223,11 +208,9 @@ export default function Home() {
     } catch (generateError) {
       setStatus("error");
       setStatusMessage("");
-      setError(
-        generateError instanceof Error
-          ? generateError.message
-          : "Terjadi kesalahan saat generate.",
-      );
+      setError(toUserError(
+        generateError instanceof Error ? generateError.message : null,
+      ));
     }
   }
 
@@ -266,8 +249,6 @@ export default function Home() {
             withTexture={withTexture}
             onQualityModeChange={setQualityMode}
             onWithTextureChange={setWithTexture}
-            texture={texture as TextureOption}
-            quad={quad}
             disabled={isLoading}
           />
 

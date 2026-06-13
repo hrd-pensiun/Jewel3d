@@ -9,10 +9,10 @@ export default function AppHeader() {
         <div className="flex min-w-0 items-center gap-3">
           <Image
             src="/logo.png"
-            alt="WIT 3D"
-            width={140}
-            height={48}
-            className="h-10 w-auto object-contain sm:h-12"
+            alt="UBS GOLD"
+            width={180}
+            height={64}
+            className="h-11 w-auto object-contain sm:h-14"
             priority
           />
         </div>

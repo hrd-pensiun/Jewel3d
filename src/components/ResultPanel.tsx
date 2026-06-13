@@ -20,9 +20,7 @@ type ResultPanelProps = {
     taskId: string;
     modelUrl: string;
     previewUrl: string | null;
-    costUsd: number;
     format: ModelFormat;
-    requestId?: string;
   } | null;
   isLoading: boolean;
   statusMessage: string;

@@ -6,9 +6,10 @@ import {
   isHeicImage,
   toUploadBlob,
 } from "@/lib/image-upload";
-import { calculateCostUsd, type TextureOption } from "@/lib/pricing";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { type TextureOption } from "@/lib/pricing";
 import { TRIPO_ENDPOINT } from "@/lib/tripo";
+import { API_ERROR_RESPONSE } from "@/lib/user-messages";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const TEXTURE_OPTIONS = new Set<TextureOption>(["no", "standard", "HD"]);
@@ -30,10 +31,8 @@ export async function POST(request: Request) {
   }
 
   if (!process.env.FAL_KEY) {
-    return NextResponse.json(
-      { error: "FAL_KEY belum dikonfigurasi di server." },
-      { status: 500 },
-    );
+    console.error("[api/generate] FAL_KEY missing");
+    return NextResponse.json({ error: API_ERROR_RESPONSE }, { status: 500 });
   }
 
   try {
@@ -117,27 +116,13 @@ export async function POST(request: Request) {
       },
     });
 
-    const costUsd = calculateCostUsd(texture, quad);
-
     return NextResponse.json({
       requestId,
-      costUsd,
       format: quad ? "fbx" : "glb",
     });
   } catch (error) {
     console.error("[api/generate]", error);
 
-    const message =
-      error instanceof Error ? error.message : "Unknown error";
-
-    return NextResponse.json(
-      {
-        error:
-          message.includes("401") || message.includes("Unauthorized")
-            ? "FAL_KEY tidak valid. Periksa API key di .env.local."
-            : "Gagal mengirim permintaan generate. Periksa koneksi dan API key.",
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: API_ERROR_RESPONSE }, { status: 500 });
   }
 }

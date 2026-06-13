@@ -56,10 +56,10 @@ export default function PinGate({ onSuccess }: PinGateProps) {
       <div className="w-full max-w-sm text-center">
         <Image
           src="/logo.png"
-          alt="WIT 3D"
-          width={160}
-          height={56}
-          className="mx-auto h-14 w-auto object-contain"
+          alt="UBS GOLD"
+          width={200}
+          height={72}
+          className="mx-auto h-16 w-auto object-contain sm:h-20"
           priority
         />
         <p className="mt-4 text-sm text-wit-muted">Masukkan PIN untuk melanjutkan</p>

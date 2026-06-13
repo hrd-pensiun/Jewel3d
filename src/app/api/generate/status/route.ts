@@ -2,24 +2,20 @@ import { NextResponse } from "next/server";
 
 import { fal } from "@/lib/fal";
 import { TRIPO_ENDPOINT, parseTripoOutput } from "@/lib/tripo";
+import { API_ERROR_RESPONSE } from "@/lib/user-messages";
 
 export const maxDuration = 15;
 
 export async function GET(request: Request) {
   if (!process.env.FAL_KEY) {
-    return NextResponse.json(
-      { error: "FAL_KEY belum dikonfigurasi di server." },
-      { status: 500 },
-    );
+    console.error("[api/generate/status] FAL_KEY missing");
+    return NextResponse.json({ error: API_ERROR_RESPONSE }, { status: 500 });
   }
 
   const requestId = new URL(request.url).searchParams.get("requestId");
 
   if (!requestId) {
-    return NextResponse.json(
-      { error: "requestId wajib diisi." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: API_ERROR_RESPONSE }, { status: 400 });
   }
 
   try {
@@ -40,10 +36,8 @@ export async function GET(request: Request) {
     const parsed = parseTripoOutput(result.data);
 
     if (!parsed) {
-      return NextResponse.json(
-        { error: "Model 3D tidak ditemukan dalam respons API." },
-        { status: 502 },
-      );
+      console.error("[api/generate/status] model_mesh missing in response");
+      return NextResponse.json({ error: API_ERROR_RESPONSE }, { status: 502 });
     }
 
     return NextResponse.json({
@@ -53,17 +47,8 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("[api/generate/status]", error);
 
-    const message =
-      error instanceof Error ? error.message : "Unknown error";
-
     return NextResponse.json(
-      {
-        status: "FAILED",
-        error:
-          message.includes("404") || message.includes("not found")
-            ? "Permintaan generate tidak ditemukan atau sudah kedaluwarsa."
-            : "Generate gagal. Coba lagi atau cek fal.ai dashboard.",
-      },
+      { status: "FAILED", error: API_ERROR_RESPONSE },
       { status: 500 },
     );
   }

@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  calculateCostUsd,
-  formatIdr,
-  formatUsd,
-  type TextureOption,
-} from "@/lib/pricing";
+import type { TextureOption } from "@/lib/pricing";
 
 export type QualityMode = "standard" | "hd" | "quad";
 
@@ -14,8 +9,6 @@ type InfoPanelProps = {
   withTexture: boolean;
   onQualityModeChange: (mode: QualityMode) => void;
   onWithTextureChange: (value: boolean) => void;
-  texture: TextureOption;
-  quad: boolean;
   disabled?: boolean;
 };
 
@@ -37,7 +30,7 @@ const QUALITY_OPTIONS: {
   {
     value: "quad",
     label: "Quad mesh",
-    description: "Output FBX untuk retopology (+$0.05)",
+    description: "Output FBX untuk retopology",
   },
 ];
 
@@ -62,12 +55,8 @@ export default function InfoPanel({
   withTexture,
   onQualityModeChange,
   onWithTextureChange,
-  texture,
-  quad,
   disabled = false,
 }: InfoPanelProps) {
-  const costUsd = calculateCostUsd(texture, quad);
-
   return (
     <div className="flex h-full flex-col rounded-2xl border border-wit-border bg-white p-5 shadow-sm sm:p-6">
       <h2 className="text-base font-semibold text-wit-navy">
@@ -134,16 +123,6 @@ export default function InfoPanel({
           <span className="text-sm text-wit-navy">Tanpa Tekstur</span>
         </label>
       </fieldset>
-
-      <div className="mt-auto pt-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-wit-muted">
-          Estimasi biaya
-        </p>
-        <p className="mt-1 text-2xl font-bold text-wit-gold">
-          {formatUsd(costUsd)}
-        </p>
-        <p className="text-sm text-wit-muted">{formatIdr(costUsd)}</p>
-      </div>
     </div>
   );
 }

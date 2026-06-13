@@ -40,7 +40,7 @@ export default function DownloadButtons({
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `wit3d-${taskId}.${extension}`;
+      anchor.download = `ubs-gold-${taskId}.${extension}`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -56,7 +56,7 @@ export default function DownloadButtons({
     setIsExportingStl(true);
 
     try {
-      await exportGlbToStl(modelUrl, `wit3d-${taskId}.stl`);
+      await exportGlbToStl(modelUrl, `ubs-gold-${taskId}.stl`);
     } catch (error) {
       console.error("[DownloadButtons] STL export failed:", error);
       setDownloadError("Gagal mengekspor STL. Coba lagi.");
