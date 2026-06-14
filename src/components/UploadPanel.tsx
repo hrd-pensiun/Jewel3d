@@ -8,8 +8,13 @@ import {
   isHeicImage,
 } from "@/lib/image-upload";
 
-const SAMPLE_IMAGE = "/sample-ring.png";
-const SAMPLE_COUNT = 5;
+const SAMPLE_IMAGES = [
+  { src: "/sample-ring.png", filename: "contoh-cincin-1.png" },
+  { src: "/sample-ring-2.png", filename: "contoh-cincin-2.png" },
+  { src: "/sample-ring.png", filename: "contoh-cincin-3.png" },
+  { src: "/sample-ring-2.png", filename: "contoh-cincin-4.png" },
+  { src: "/sample-ring-2.png", filename: "contoh-cincin-5.png" },
+] as const;
 
 type UploadPanelProps = {
   file: File | null;
@@ -80,10 +85,13 @@ export default function UploadPanel({
   async function loadSample(index: number) {
     if (disabled) return;
 
+    const sample = SAMPLE_IMAGES[index];
+    if (!sample) return;
+
     try {
-      const response = await fetch(SAMPLE_IMAGE);
+      const response = await fetch(sample.src);
       const blob = await response.blob();
-      const sampleFile = new File([blob], `sample-ring-${index + 1}.png`, {
+      const sampleFile = new File([blob], sample.filename, {
         type: "image/png",
       });
       handleFile(sampleFile, index);
@@ -186,9 +194,9 @@ export default function UploadPanel({
           Contoh Gambar
         </p>
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {Array.from({ length: SAMPLE_COUNT }).map((_, index) => (
+          {SAMPLE_IMAGES.map((sample, index) => (
             <button
-              key={index}
+              key={sample.src + index}
               type="button"
               disabled={disabled}
               onClick={() => loadSample(index)}
@@ -199,7 +207,7 @@ export default function UploadPanel({
               }`}
             >
               <Image
-                src={SAMPLE_IMAGE}
+                src={sample.src}
                 alt={`Contoh ${index + 1}`}
                 fill
                 className="object-cover"
