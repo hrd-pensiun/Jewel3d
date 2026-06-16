@@ -9,6 +9,8 @@ import {
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { type TextureOption } from "@/lib/pricing";
 import { TRIPO_ENDPOINT } from "@/lib/tripo";
+import { recordUsage } from "@/lib/usage";
+import { isValidUserName, normalizeUserName } from "@/lib/user-session";
 import { API_ERROR_RESPONSE } from "@/lib/user-messages";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -41,6 +43,19 @@ export async function POST(request: Request) {
     const textureRaw = formData.get("texture");
     const quadRaw = formData.get("quad");
     const orientationRaw = formData.get("orientation");
+    const userNameRaw = formData.get("userName");
+
+    if (
+      typeof userNameRaw !== "string" ||
+      !isValidUserName(userNameRaw)
+    ) {
+      return NextResponse.json(
+        { error: "Nama wajib diisi." },
+        { status: 400 },
+      );
+    }
+
+    const userName = normalizeUserName(userNameRaw);
 
     if (!(image instanceof File)) {
       return NextResponse.json(
@@ -116,9 +131,16 @@ export async function POST(request: Request) {
       },
     });
 
+    const usageCount = await recordUsage(userName, {
+      texture,
+      quad,
+      requestId,
+    });
+
     return NextResponse.json({
       requestId,
       format: quad ? "fbx" : "glb",
+      usageCount,
     });
   } catch (error) {
     console.error("[api/generate]", error);

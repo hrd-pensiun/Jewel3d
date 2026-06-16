@@ -2,7 +2,12 @@
 
 import Image from "next/image";
 
-export default function AppHeader() {
+type AppHeaderProps = {
+  userName?: string | null;
+  usageCount?: number;
+};
+
+export default function AppHeader({ userName, usageCount = 0 }: AppHeaderProps) {
   return (
     <header className="border-b border-wit-border bg-white">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
@@ -30,13 +35,12 @@ export default function AppHeader() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            className="hidden items-center gap-1.5 rounded-lg border border-wit-border px-3 py-2 text-sm text-wit-muted sm:flex"
-            title="Fitur mockup"
-          >
-            <span aria-hidden>🕐</span> History
-          </button>
+          {userName && (
+            <p className="hidden text-right text-xs text-wit-muted sm:block">
+              <span className="block font-medium text-wit-navy">{userName}</span>
+              <span>Digunakan {usageCount}×</span>
+            </p>
+          )}
           <button
             type="button"
             className="rounded-lg bg-wit-navy px-3 py-2 text-sm font-medium text-white sm:px-4"

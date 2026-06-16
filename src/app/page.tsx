@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import InfoPanel, { deriveGenerateOptions, type QualityMode } from "@/components/InfoPanel";
 import AppHeader from "@/components/layout/AppHeader";
 import StepProgress from "@/components/layout/StepProgress";
+import NameGate from "@/components/NameGate";
 import PinGate from "@/components/PinGate";
 import ResultPanel from "@/components/ResultPanel";
 import UploadPanel from "@/components/UploadPanel";
 import { parseJsonResponse, sleep } from "@/lib/fetch-json";
 import { PIN_SESSION_KEY } from "@/lib/pin";
+import { USER_NAME_KEY } from "@/lib/user-session";
 import { toUserError, USER_MESSAGES } from "@/lib/user-messages";
 import type { ModelFormat } from "@/lib/tripo";
 
@@ -23,6 +25,7 @@ type GenerateResult = {
 type SubmitResponse = {
   requestId: string;
   format: ModelFormat;
+  usageCount?: number;
   error?: string;
 };
 
@@ -41,7 +44,9 @@ type GenerateStatus = "idle" | "uploading" | "generating" | "done" | "error";
 const PENDING_JOB_KEY = "jewel3d_pending_job";
 
 export default function Home() {
-  const [unlocked, setUnlocked] = useState(false);
+  const [pinUnlocked, setPinUnlocked] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [usageCount, setUsageCount] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [qualityMode, setQualityMode] = useState<QualityMode>("standard");
   const [withTexture, setWithTexture] = useState(true);
@@ -65,12 +70,25 @@ export default function Home() {
 
   useEffect(() => {
     if (sessionStorage.getItem(PIN_SESSION_KEY) === "1") {
-      setUnlocked(true);
+      setPinUnlocked(true);
+    }
+
+    const storedName = sessionStorage.getItem(USER_NAME_KEY);
+    if (storedName) {
+      setUserName(storedName);
+      void fetch(`/api/usage?userName=${encodeURIComponent(storedName)}`)
+        .then((res) => res.json())
+        .then((data: { usageCount?: number }) => {
+          if (typeof data.usageCount === "number") {
+            setUsageCount(data.usageCount);
+          }
+        })
+        .catch(() => undefined);
     }
   }, []);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (!userName) return;
 
     const raw = sessionStorage.getItem(PENDING_JOB_KEY);
     if (!raw) return;
@@ -86,7 +104,7 @@ export default function Home() {
       sessionStorage.removeItem(PENDING_JOB_KEY);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlocked]);
+  }, [userName]);
 
   async function pollGenerateStatus(
     requestId: string,
@@ -153,14 +171,16 @@ export default function Home() {
     } catch (resumeError) {
       setStatus("error");
       setStatusMessage("");
-      setError(toUserError(
-        resumeError instanceof Error ? resumeError.message : null,
-      ));
+      setError(
+        toUserError(
+          resumeError instanceof Error ? resumeError.message : null,
+        ),
+      );
     }
   }
 
   async function handleGenerate() {
-    if (!file || isLoading) return;
+    if (!file || !userName || isLoading) return;
 
     setError(null);
     setResult(null);
@@ -172,6 +192,7 @@ export default function Home() {
     formData.append("texture", texture);
     formData.append("quad", String(quad));
     formData.append("orientation", "align_image");
+    formData.append("userName", userName);
 
     try {
       const response = await fetch("/api/generate", {
@@ -183,6 +204,10 @@ export default function Home() {
 
       if (!response.ok || !submitData.requestId) {
         throw new Error(toUserError(submitData.error));
+      }
+
+      if (typeof submitData.usageCount === "number") {
+        setUsageCount(submitData.usageCount);
       }
 
       sessionStorage.setItem(
@@ -208,9 +233,11 @@ export default function Home() {
     } catch (generateError) {
       setStatus("error");
       setStatusMessage("");
-      setError(toUserError(
-        generateError instanceof Error ? generateError.message : null,
-      ));
+      setError(
+        toUserError(
+          generateError instanceof Error ? generateError.message : null,
+        ),
+      );
     }
   }
 
@@ -223,12 +250,24 @@ export default function Home() {
     sessionStorage.removeItem(PENDING_JOB_KEY);
   }
 
-  if (!unlocked) {
+  if (!pinUnlocked) {
     return (
       <PinGate
         onSuccess={() => {
           sessionStorage.setItem(PIN_SESSION_KEY, "1");
-          setUnlocked(true);
+          setPinUnlocked(true);
+        }}
+      />
+    );
+  }
+
+  if (!userName) {
+    return (
+      <NameGate
+        onSuccess={(name, count) => {
+          sessionStorage.setItem(USER_NAME_KEY, name);
+          setUserName(name);
+          setUsageCount(count);
         }}
       />
     );
@@ -236,7 +275,13 @@ export default function Home() {
 
   return (
     <div className="min-h-[100dvh] bg-[#eef1f6]">
-      <AppHeader />
+      <AppHeader userName={userName} usageCount={usageCount} />
+
+      <div className="border-b border-wit-border bg-white px-4 py-2 text-center text-xs text-wit-muted sm:hidden">
+        <span className="font-medium text-wit-navy">{userName}</span>
+        {" · "}Digunakan {usageCount}×
+      </div>
+
       <StepProgress currentStep={currentStep} />
 
       <main
